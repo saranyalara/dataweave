@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="weather-apiFlow" doc:id="2b774b19-d41e-40ea-af0c-65917a7bdf4e" >
+		<http:listener doc:name="Listener" doc:id="573815d9-e38b-4a21-8155-feb00c87e3f0" config-ref="HTTP_Listener_config" path="${http.path}"/>
+		<logger level="INFO" doc:name="Logger" doc:id="1e8c22a6-9c56-4b71-8ee8-30816ef98e0d" message="#[correlationId] Flow starts"/>
+		<http:request method="GET" doc:name="Request" doc:id="1531056c-8176-4fbe-9285-2aa744f7104d" config-ref="HTTP_Request_configuration" path="${HttpRequest.path}">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"start" : attributes.queryParams.start,
+	"key" : attributes.queryParams.key,
+	"end" : attributes.queryParams.end,
+	"station" : attributes.queryParams.station
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="d3da9641-eac5-49e8-8125-61bd9d905e98" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="bb546fbf-4264-4d49-a3a7-697ebd998648" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var month = "12"
+fun getMonth(temp) = (temp splitBy "-")[1]
+fun maxTemp(temp) = max(temp)
+---
+{
+   max_temperatue_month: maxTemp(payload.data[?(getMonth($.date) == month)] map  $.temperature_max),
+   avg_precipitation_month: (payload.data groupBy ((item, index) -> getMonth(item.date))) mapObject  ({
+   '$$': avg($[?($.precipitation != null)] map $.precipitation)
+})}
+
+
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="bc49fa5c-ef77-4389-9c15-4c79b7f25910" message="#[correlationId] result [payload]"/>
+	</flow>
+</mule>

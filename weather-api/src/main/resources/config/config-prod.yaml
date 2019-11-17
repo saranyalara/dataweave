@@ -1,0 +1,9 @@
+http:
+  host: 0.0.0.0
+  port: "8086"
+  path: /weather
+      
+HttpRequest:
+  host: api.meteostat.net
+  path: /history/daily
+  basepath: /v1
